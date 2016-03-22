@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+if [ "$#" -ne "1" ]
+	then
+		echo 'need a single file name'
+		exit
+fi
+
+
+
+ncdump -v xCell -f f $1 | sed 's/\=/\n/' | sed 's/;  \/\//,  \/\//' | sed 's/\/\/.*//' | sed '/[a-zA-Z\;\:\}\{]/d' | sed 's/,//' | sed '/^\s*$/d' > xCell
+
+ncdump -v yCell -f f $1 | sed 's/\=/\n/' | sed 's/;  \/\//,  \/\//' | sed 's/\/\/.*//' | sed '/[a-zA-Z\;\:\}\{]/d' | sed 's/,//' | sed '/^\s*$/d' > yCell
+
+ncdump -v zCell -f f $1 | sed 's/\=/\n/' | sed 's/;  \/\//,  \/\//' | sed 's/\/\/.*//' | sed '/[a-zA-Z\;\:\}\{]/d' | sed 's/,//' | sed '/^\s*$/d' > zCell
+
+paste xCell yCell zCell > $1.points.txt
+
+rm xCell yCell zCell 
+
+exit
