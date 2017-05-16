@@ -20,6 +20,9 @@ using namespace std;
 double radius = 0.0;
 REAL pii = 2.0 * asin(1.0);
 
+
+void convert_xl(REAL x, REAL y, REAL z, REAL* lat, REAL* lon);
+
 class pnt {
 public:
 	REAL x, y, z;
@@ -187,6 +190,39 @@ public:
 		return sqrt(p*(p-d1)*(p-d2)*(p-d3));
 	}
 
+	pnt calculate_midpoint(pnt a, pnt b) {
+		pnt m = (b-a)/2;
+		m = a+m;
+		m.normalize();
+		return m*a.magnitude();	
+	}
+
+	pnt calculate_circumcenter(pnt a, pnt b, pnt c) {
+		pnt ca = c-a;
+		pnt ba = b-a;
+		pnt baca = ba.cross(ca);
+		pnt bacaba = (baca.cross(ba))*(ca.magnitude2());
+		pnt cabaca = (ca.cross(baca))*(ba.magnitude2());
+		pnt m = a + (bacaba + cabaca) / (2.0*baca.magnitude2());
+
+		return m;
+	}
+
+	REAL density_function(pnt p) {
+		/*
+		REAL lat, lon, r, norm, width, trans_center, min_val;
+		convert_xl(p.z, p.y, p.z, &lat, &lon);
+		
+		r = fabs(lat);
+		width = .08;
+		trans_center = 0.40;
+      min_val = pow((1.0/5.0), 4);
+      norm = 1.0/(1.0-min_val);
+      return (((tanh((trans_center-r)*(1.0/width))+1.0)/2))/norm + min_val;
+		*/
+		return 1;
+	}
+
 
 
 
@@ -270,10 +306,12 @@ int main(int argc, char* argv[]) {
 			else if (j == 2) icoVerticesG1.push_back(new pnt((1.0 + (i < 2.0) * (-2.0))*(1.0+sqrt(5.0))/2.0,  0.0,  2.0*(0.0-i%2) + 1.0));
 		}
 	}*/
-	if(argc < 3) {
-		cout << "\n:: Must supply command line of form exec filename edgelength betavalue" << endl; 
+	if(argc < 1) {
+		cout << "\n:: Must supply command line of form exec filename" << endl; 
 		return -1;
 	}
+	int nIterations = stoi(argv[2]);
+	cout << "Number of iterations to perform: " << nIterations << endl;
 	ifstream pointmaster(argv[1]);
 	REAL x_, y_, z_;
 	i=0;
@@ -290,13 +328,8 @@ int main(int argc, char* argv[]) {
 	}*/
 			//string edge(argv[2]);
 
-	double edgelength = std::stod(argv[2]);
-	double beta;
-	if(argc == 4) beta = stod(argv[3]);
-	else beta = 0.0; // No Shmidt Transform
-	
 	radius = sqrt(x_*x_ + y_*y_ + z_*z_);
-
+	cout << "Radius is " << radius << endl;
 
 
 /******************************************************************************************************************************************/
@@ -305,30 +338,19 @@ int main(int argc, char* argv[]) {
 	//setupregions(regions); // setup regions must create the appropriate number of regions and decide their center points
 	regions.push_back(region());
 	regions.push_back(region());
-	regions[0].center.z = radius;
-	regions[1].center.z = -radius;
-	printf("Region 0 Center: (%.2f, %.2f, %.2f)\n", regions[0].center.x, regions[0].center.y, regions[0].center.z);
-	printf("Region 1 Center: (%.2f, %.2f, %.2f)\n", regions[1].center.x, regions[1].center.y, regions[1].center.z);
-
-	ofstream latstream("original_lats.txt");	
-
-	REAL d = -1;
-	if (beta != 0.0) {
-		for (i=0; i<icoVerticesG1.size(); i++) {
-			REAL lat, lon;
-			convert_xl(icoVerticesG1[i]->x, icoVerticesG1[i]->y, icoVerticesG1[i]->z, &lat, &lon);
-			latstream << lat << endl;
-			if(lat != pii / 2) lat = schmidt_transform(lat, beta);
-			convert_lx(&icoVerticesG1[i]->x, &icoVerticesG1[i]->y, &icoVerticesG1[i]->z, lat, lon, radius);
-		}
-	cout << "Performed Schmidt Transform" << endl;
+	regions.push_back(region());
+	regions.push_back(region());
+	regions[0].center = pnt(1.0, 0.0, -1/sqrt(2));
+	regions[1].center = pnt(-1.0, 0.0, -1/sqrt(2));
+	regions[2].center = pnt(0.0, 1.0, 1/sqrt(2));
+	regions[3].center = pnt(0.0, -1.0, 1/sqrt(2));
+	ofstream centers("rcenters.txt");	
+	for (i=0; i<regions.size(); i++){
+		regions[i].center.normalize();	
+		printf("Region %d Center: (%.2f, %.2f, %.2f)\n", i, regions[i].center.x, regions[i].center.y, regions[i].center.z);
+		centers << regions[i].center.x << "   " << regions[i].center.y << "   " << regions[i].center.z << endl;
 	}
 
-	ofstream pointsout("output_points.txt");
-	for (i=0; i<icoVerticesG1.size(); i++) {
-		pointsout << icoVerticesG1[i]->x << "    " << icoVerticesG1[i]->y << "    " << icoVerticesG1[i]->z << endl;
-	}
-	
 
 
 
@@ -357,209 +379,202 @@ convert_lx(&test3.x, &test3.y, &test3.z, lat, lon, 1.0);
 lat = schmidt_transform(lat, beta);
 printf("->(%f, %f, %f) with transformed l/l %6f, %6f\n", test3.x, test3.y, test3.z, lat, lon);
 */
-	cout << "Generating Pointlists... \r" << endl;
-	for (i = 0; i < icoVerticesG1.size(); i++) {
-		int closestRegion = 0;
-		REAL min = arcdistance(*icoVerticesG1[i], regions[0].center);
-		for (j = 1; j < regions.size(); j++){
-			d = arcdistance(*icoVerticesG1[i], regions[j].center);
 
-			if (d < min) {
-				closestRegion = j;
-				min = d;
-			}
-		}
-		regions[closestRegion].localpointlist.push_back(*icoVerticesG1[i]);
-		for (j = 0; j < regions.size(); j++) {
-			if (j != closestRegion) {
-				d = arcdistance(*icoVerticesG1[i], regions[j].center);
-				if (fabs(min - d) < 1.5*edgelength) {
-					regions[j].halopoints.push_back(*icoVerticesG1[i]);
-				}
-			}
-		}
-		
-	}
-
-/*	for (i=0; i<regions.size(); i++) {
-		cout << "Region " << i << "local points:" << endl;
-		for (j=0; j<regions[i].localpointlist.size(); j++) {
-			printf("\t%d: (%.2f, %.2f, %.2f)\n", regions[i].localpointlist[j].id, regions[i].localpointlist[j].x, regions[i].localpointlist[j].y, regions[i].localpointlist[j].z);
-		}
-		cout << "\nRegion " << i << "halo points:" << endl;
-		for (j=0; j<regions[i].halopoints.size(); j++) {
-			printf("\t%d: (%.2f, %.2f, %.2f)\n", regions[i].halopoints[j].id, regions[i].halopoints[j].x, regions[i].halopoints[j].y, regions[i].halopoints[j].z);
-		}
-	}*/
-	cout << "Checking for errors in point lists... \r" << endl;
-	int errcount = 0;
-	for (i=0; i<regions[0].localpointlist.size(); i++) {
-		for (j = 0; j< regions[1].localpointlist.size(); j++) {
-			if (regions[0].localpointlist[i] == regions[1].localpointlist[j]) {cout << "\n\n\n ERROR: a point is in the local point list of both regions\n\n" << endl; errcount++;}
-		}
-	}
-
-	for (i=0; i<regions.size(); i++) {
-		for (j=0; j<regions[i].localpointlist.size(); j++) {
-			for (k=0; k < regions[i].halopoints.size(); k++) {
-				if (regions[i].localpointlist[j] == regions[i].halopoints[k]) {errcount++; cout << "\n\n\nERROR: a point is in both the halo and local lists for a region\n\n" << endl;}
-			}
-		}
-	}
-	cout << "Errcount: " << errcount << endl;
-
-	for (i=0; i<regions.size(); i++) {
-		cout << "Region " << i << " has " << regions[i].localpointlist.size() << " natural points and " << regions[i].halopoints.size() << " halo points." << endl;
-	}
-
-/******************************************************************************************************************************************/
-
-	vector<REAL> sizes;
-	REAL area;
-	int found = 0;
-	int numtri = 0;
-
-	for (i=0; i<regions.size(); i++) {
-		cout << "\nRegion " << i << " Loop" << endl;
-
-		struct triangulateio in, out, vorout;
-		pnt center = regions[i].center;
-		pnt axis(center.x, center.y, center.z);
-		REAL min_dir = min(fabs(axis.x),min(fabs(axis.y),fabs(axis.z)));
-
-		if(min_dir == fabs(axis.x)){
-			axis.x = 1.0;
-			axis.y = 0.0;
-			axis.z = 0.0;
-		} else if (min_dir == fabs(axis.y)){
-			axis.x = 0.0;
-			axis.y = 1.0;
-			axis.z = 0.0;
-		} else if (min_dir == fabs(axis.z)){
-			axis.x = 0.0;
-			axis.y = 0.0;
-			axis.z = 1.0;
-		}
-
-		pnt x_hat = center.cross(axis);
-		x_hat.normalize();
-		pnt y_hat = center.cross(x_hat);
-		y_hat.normalize();
-		double s;
-		pnt Q;
-
-		in.numberofpoints = regions[i].localpointlist.size() + regions[i].halopoints.size();
-		in.numberofpointattributes = 0;
-		in.pointlist = (double *) malloc(in.numberofpoints * 2 * sizeof(double));
-		in.numberofsegments = 0;
-		in.numberofholes = 0;
-		in.numberofregions = 0;
-		in.regionlist = (double *) NULL;
-		in.pointmarkerlist = (int *) NULL;
-
-		for (j = 0; j < regions[i].localpointlist.size(); j++) {
-			
-			s = 2.0/center.dot(center + (regions[i].localpointlist[j]));
-			Q = regions[i].localpointlist[j] * s + center * (s - 1.0);
-			in.pointlist[j*2] = x_hat.dot(Q);
-			in.pointlist[j*2+1] = y_hat.dot(Q);			
-		}
-
-		for (k = 0; k<regions[i].halopoints.size(); k++) {
-			s = 2.0/center.dot(center + (regions[i].halopoints[k]));
-			Q = regions[i].halopoints[k] * s + center * (s - 1.0);
-			in.pointlist[j*2] = x_hat.dot(Q);
-			in.pointlist[j*2+1] = y_hat.dot(Q);
-			j++;
-		}
-
-		out.pointlist = (double *)NULL;
-		out.trianglelist = (int *)NULL;
-		cout << "Triangulating ... " << flush;
-		t1 = clock();
-		triangulate(flags,&in,&out,&vorout);
-		t2 = clock();
-		cout << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
-
-		j = 0;
-		int l = 0;
-		k = 1;
-		
-		cout << "Processing Triangles ... 0%%" << flush;
-		t1 = clock();
-		int percent = 0;
-		for (k = 0; k < out.numberoftriangles; k++) {
-		if (100 * k / out.numberoftriangles > percent) {
-			percent = 100 * k / out.numberoftriangles; 
-			printf("\b\b\b%02d%%", percent);
+	double tPartition=0.0, tTriangulation=0.0, tProjection=0.0, tLloyd=0.0;
+	int iIteration = 0;
+	int ipercent = 0;
+	cout << "0%%" << flush;
+	while(iIteration < nIterations){
+		if (int(100.0 * float(iIteration) / float(nIterations)) > ipercent) {
+			ipercent = int(100.0 * float(iIteration) / float(nIterations));
+			printf("\b\b\b%02d%%", ipercent);
 			cout << flush;
 		}
-			if ((out.trianglelist[3*k] != out.trianglelist[3*k+1]) && (out.trianglelist[3*k] != out.trianglelist[3*k+2]) && (out.trianglelist[3*k+2] != out.trianglelist[3*k+1])) {
-				int test = isNaturalOrHalo(regions[i], out.trianglelist[3*k], out.trianglelist[3*k+1], out.trianglelist[3*k+2]);
-				switch (test)
-				{
-					default :
-						break;
-					case 0:
-						int x, y, z;
-						if(out.trianglelist[3*k] < regions[i].localpointlist.size()) x = regions[i].localpointlist[out.trianglelist[3*k]].id;
-						else x = regions[i].halopoints[out.trianglelist[3*k] - regions[i].localpointlist.size()].id;
+		iIteration++;
+		REAL d;
+		t2 = clock();
+		//cout << "Partitioning Points... " << flush;
+		for (i=0; i<regions.size(); i++) {
+			if (!regions[i].localpointlist.empty()) regions[i].localpointlist.clear();
+			if (!regions[i].triangles.empty()) regions[i].triangles.clear();
+		}
+		for (i = 0; i < icoVerticesG1.size(); i++) {
+			int closestRegion = 0;
+			REAL min = arcdistance(*icoVerticesG1[i], regions[0].center);
+			for (j = 1; j < regions.size(); j++){
+				d = arcdistance(*icoVerticesG1[i], regions[j].center);
 
-						if(out.trianglelist[3*k+1] < regions[i].localpointlist.size()) y = regions[i].localpointlist[out.trianglelist[3*k+1]].id;
-						else y = regions[i].halopoints[out.trianglelist[3*k+1] - regions[i].localpointlist.size()].id;
-
-						if(out.trianglelist[3*k+2] < regions[i].localpointlist.size()) z = regions[i].localpointlist[out.trianglelist[3*k+2]].id;
-						else z = regions[i].halopoints[out.trianglelist[3*k+2] - regions[i].localpointlist.size()].id;
-
-						regions[i].halotriangles.push_back(triangle(j, x, y, z));
-						j++;
-						if(test == 0) numtri++;
-						break;
-					case 1:
-						regions[i].triangles.push_back(triangle(l, regions[i].localpointlist[out.trianglelist[3*k]].id, regions[i].localpointlist[out.trianglelist[3*k+1]].id, regions[i].localpointlist[out.trianglelist[3*k+2]].id));
-						l++;
-						if(test == 1) numtri++;
-						break;
-
+				if (d < min) {
+					closestRegion = j;
+					min = d;
 				}
 			}
+			regions[closestRegion].localpointlist.push_back(*icoVerticesG1[i]);
 		}
-
-
-		
-		t2 = clock();
-		cout << "\b\b\b" << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
-		cout << "And erasing duplicates ..." << flush;
 		t1 = clock();
-		int numer = 0;
-		
-		for (k=0; k<i; k++) {
-			int cond = 0;
-			vector<triangle>::iterator tri_itr = regions[i].halotriangles.begin();
-			while (tri_itr !=regions[i].halotriangles.end()) { //for (tri_itr = regions[i].halotriangles.begin(); tri_itr !=regions[i].halotriangles.end(); tri_itr++) {
-				for (l = 0; l < regions[k].halotriangles.size(); l++) {
-					cond = 0;
-					if ((*tri_itr) == regions[k].halotriangles[l]) {
-						numer++;
-						tri_itr = regions[i].halotriangles.erase(tri_itr);
-						l = regions[k].halotriangles.size();
-						cond = 1;
-					}
-				}
-				if (!cond) tri_itr++;
-			}
-		}
+		tPartition += (float)(t1-t2)/CLOCKS_PER_SEC;
+		//cout << (float)(t1-t2)/CLOCKS_PER_SEC << "s" << endl;
 
-		t2 = clock();
-		cout << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
-		cout << "Erased " << numer << " duplicate triangles" << endl;
-		numtri -= numer;
+	/*	for (i=0; i<regions.size(); i++) {
+			cout << "Region " << i << "local points:" << endl;
+			for (j=0; j<regions[i].localpointlist.size(); j++) {
+				printf("\t%d: (%.2f, %.2f, %.2f)\n", regions[i].localpointlist[j].id, regions[i].localpointlist[j].x, regions[i].localpointlist[j].y, regions[i].localpointlist[j].z);
+			}
+			cout << "\nRegion " << i << "halo points:" << endl;
+			for (j=0; j<regions[i].halopoints.size(); j++) {
+				printf("\t%d: (%.2f, %.2f, %.2f)\n", regions[i].halopoints[j].id, regions[i].halopoints[j].x, regions[i].halopoints[j].y, regions[i].halopoints[j].z);
+			}
+		}*/
+		//cout << "Checking for errors in point lists... " << endl;
+		int errcount = 0;
+		/*for (i=0; i<regions[0].localpointlist.size(); i++) {
+			for (j = 0; j< regions[1].localpointlist.size(); j++) {
+				if (regions[0].localpointlist[i] == regions[1].localpointlist[j]) {cout << "\n\n\n ERROR: a point is in the local point list of both regions\n\n" << endl; errcount++;}
+			}
+		}*/
+		//cout << "Errcount: " << errcount << endl;
+
+		//for (i=0; i<regions.size(); i++) {
+		//	cout << "Region " << i << " has " << regions[i].localpointlist.size() << " natural points and " << regions[i].halopoints.size() << " halo points." << endl;
+		//}
+
+	/******************************************************************************************************************************************/
+
+		vector<REAL> sizes;
+		REAL area;
+		int found = 0;
+		int numtri = 0;
+
+		for (i=0; i<regions.size(); i++) {
+			//cout << "\nRegion " << i << " Loop" << endl;
+			t2 = clock();
+			struct triangulateio in, out, vorout;
+			pnt center = regions[i].center;
+			pnt axis(center.x, center.y, center.z);
+			REAL min_dir = min(fabs(axis.x),min(fabs(axis.y),fabs(axis.z)));
+
+			if(min_dir == fabs(axis.x)){
+				axis.x = 1.0;
+				axis.y = 0.0;
+				axis.z = 0.0;
+			} else if (min_dir == fabs(axis.y)){
+				axis.x = 0.0;
+				axis.y = 1.0;
+				axis.z = 0.0;
+			} else if (min_dir == fabs(axis.z)){
+				axis.x = 0.0;
+				axis.y = 0.0;
+				axis.z = 1.0;
+			}
+
+			pnt x_hat = center.cross(axis);
+			x_hat.normalize();
+			pnt y_hat = center.cross(x_hat);
+			y_hat.normalize();
+			double s;
+			pnt Q;
+
+			in.numberofpoints = regions[i].localpointlist.size() + regions[i].halopoints.size();
+			in.numberofpointattributes = 0;
+			in.pointlist = (double *) malloc(in.numberofpoints * 2 * sizeof(double));
+			in.numberofsegments = 0;
+			in.numberofholes = 0;
+			in.numberofregions = 0;
+			in.regionlist = (double *) NULL;
+			in.pointmarkerlist = (int *) NULL;
+
+			for (j = 0; j < regions[i].localpointlist.size(); j++) {
+				
+				s = 2.0/center.dot(center + (regions[i].localpointlist[j]));
+				Q = regions[i].localpointlist[j] * s + center * (s - 1.0);
+				in.pointlist[j*2] = x_hat.dot(Q);
+				in.pointlist[j*2+1] = y_hat.dot(Q);			
+			}
+
+			out.pointlist = (double *)NULL;
+			out.trianglelist = (int *)NULL;
+			t1 = clock();
+			tProjection += (float)(t1-t2)/CLOCKS_PER_SEC;
+			//cout << (float)(t1-t2)/CLOCKS_PER_SEC << "s for projection" << endl;
+			//cout << "Triangulating ... " << flush;
+			triangulate(flags,&in,&out,&vorout);
+			t2 = clock();
+			tTriangulation += (float)(t2-t1)/CLOCKS_PER_SEC;
+			//cout << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
+
+			j = 0;
+			int l = 0;
+			k = 1;
+			
+			//cout << "Processing Triangles and performing Lloyd iteration... 0%%" << flush;
+			t1 = clock();
+			int percent = 0;
+			for (k = 0; k < out.numberoftriangles; k++) {
+				//if (100 * k / out.numberoftriangles > percent) {
+				//	percent = 100 * k / out.numberoftriangles; 
+				//	printf("\b\b\b%02d%%", percent);
+				//	cout << flush;
+				//}
+
+				//regions[i].triangles.push_back(triangle(l, regions[i].localpointlist[out.trianglelist[3*k]].id, regions[i].localpointlist[out.trianglelist[3*k+1]].id, regions[i].localpointlist[out.trianglelist[3*k+2]].id));
+				regions[i].triangles.push_back(triangle(l, out.trianglelist[3*k], out.trianglelist[3*k+1], out.trianglelist[3*k+2]));
+				numtri++;
+			}
+
+
+			pnt* newCenter =  new pnt[regions[i].localpointlist.size()];
+			REAL* areaCell = new REAL[regions[i].localpointlist.size()];
+			long npts = regions[i].localpointlist.size();
+			// iterate through all triangles computing weights
+			for (k = 0; k<regions[i].triangles.size(); k++) {
+				triangle tri_k = regions[i].triangles[k];
+				if(tri_k.p1 >= npts || tri_k.p2 >= npts || tri_k.p3 >= npts) {
+					cout << tri_k.p1 << ", "<< tri_k.p2 << ", "<< tri_k.p3 << " :: " << npts << endl;
+				}
+
+				pnt p1 = regions[i].localpointlist[tri_k.p1];
+				pnt p2 = regions[i].localpointlist[tri_k.p2];
+				pnt p3 = regions[i].localpointlist[tri_k.p3];
+				
+				pnt r = calculate_circumcenter(p1, p2, p3);
+
+				pnt w12 = calculate_midpoint(p1, p2);
+				pnt w23 = calculate_midpoint(p2, p3);
+				pnt w31 = calculate_midpoint(p3, p1);
+
+				pnt q1 = calculate_midpoint(p1, r);
+				pnt q2 = calculate_midpoint(p2, r);
+				pnt q3 = calculate_midpoint(p3, r);
+				REAL area = areaOfTriangle(p1, w31, r) + areaOfTriangle(p1, w12, r);
+				newCenter[tri_k.p1] += q1 * area * density_function(q1);	
+				areaCell[tri_k.p1] += area;
+
+				area = areaOfTriangle(p2, w12, r) + areaOfTriangle(p2, w23, r);
+				newCenter[tri_k.p2] += q2 * area * density_function(q2);	
+				areaCell[tri_k.p2] += area;
+
+				area = areaOfTriangle(p3, w23, r) + areaOfTriangle(p3, w31, r);
+				newCenter[tri_k.p3] += q3 * area * density_function(q3);	
+				areaCell[tri_k.p3] += area;
+			}
+
+
+			// iterate through all corners and relax according to weights computed
+
+			for (k=0; k<regions[i].localpointlist.size(); k++) {
+				newCenter[k] = regions[i].localpointlist[k] + newCenter[k] / areaCell[k];
+			}
+			t2 = clock();
+			tLloyd += (float)(t2-t1)/CLOCKS_PER_SEC;
+			//cout << "\b\b\b" << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
+			
+		}
 	}
 
+	//int numtri2 = numtri;
+	//numtri = 0;
 
-	int numtri2 = numtri;
-	numtri = 0;
-
+/*
 	cout << "\nWriting triangles to file ... 0%%" << flush;
 	t1 = clock();
 	ofstream triangleout("output_triangulation.txt");
@@ -599,6 +614,7 @@ printf("->(%f, %f, %f) with transformed l/l %6f, %6f\n", test3.x, test3.y, test3
 
 	t2 = clock();
 	cout << "\b\b\b" << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
+
 	cout << "There are " << numtri << "=" << numtri2 << "=" << regions[0].triangles.size() + regions[0].halotriangles.size() + regions[1].triangles.size() + regions[1].halotriangles.size() << "triangles" << endl;
 	cout << "There are " << sizes.size() << " different areas of these triangles:" << endl;
 	REAL biggest = 0.0;
@@ -611,7 +627,17 @@ printf("->(%f, %f, %f) with transformed l/l %6f, %6f\n", test3.x, test3.y, test3
 
 	cout << "Largest Area: " << biggest << "\nSmallest Area: " << smallest << endl;
 
-	
+*/
+
+	cout << "Wall clock time in serial: " << tPartition + tProjection + tTriangulation + tLloyd << endl;	
+	cout << "Total tPartition: " << tPartition << endl;
+	cout << "Total tProjection: " << tProjection << endl;
+	cout << "Total tTriangulation: " << tTriangulation << endl;
+	cout << "Total tLloyd: " << tLloyd << "\n" << endl;
+	cout << "nIterations: " << nIterations << endl;
+	cout << "Time in ideally parallelized Proj/Triangulation over " << regions.size() << " processors: " << tPartition + ( tProjection + tTriangulation) / float(regions.size()) + tLloyd << endl;
+	cout << "Time in ideally parallelized Proj/Tri/Lloyd over " << regions.size() << " processors: " << tPartition + (tProjection + tTriangulation + tLloyd) / float(regions.size()) << endl;
+ 
 	return 0;
 
 }

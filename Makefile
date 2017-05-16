@@ -1,6 +1,6 @@
 CC = g++
-CPFLAGS = -std=c++11
-CFLAGS = 
+CPFLAGS = -O3 -std=c++11
+CFLAGS = -O3 
 
 ifneq "$(NETCDF)" ""
         INCLUDES += -I$(NETCDF)/include
