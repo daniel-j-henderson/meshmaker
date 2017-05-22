@@ -101,9 +101,9 @@
 /*  `pointlist':  An array of point coordinates.  The first point's x        */
 /*    coordinate is at index [0] and its y coordinate at index [1], followed */
 /*    by the coordinates of the remaining points.  Each point occupies two   */
-/*    REALs.                                                                 */
+/*    triREALs.                                                                 */
 /*  `pointattributelist':  An array of point attributes.  Each point's       */
-/*    attributes occupy `numberofpointattributes' REALs.                     */
+/*    attributes occupy `numberofpointattributes' triREALs.                     */
 /*  `pointmarkerlist':  An array of point markers; one int per point.        */
 /*                                                                           */
 /*  `trianglelist':  An array of triangle corners.  The first triangle's     */
@@ -112,8 +112,8 @@
 /*    represents a nonlinear element.  Each triangle occupies                */
 /*    `numberofcorners' ints.                                                */
 /*  `triangleattributelist':  An array of triangle attributes.  Each         */
-/*    triangle's attributes occupy `numberoftriangleattributes' REALs.       */
-/*  `trianglearealist':  An array of triangle area constraints; one REAL per */
+/*    triangle's attributes occupy `numberoftriangleattributes' triREALs.       */
+/*  `trianglearealist':  An array of triangle area constraints; one triREAL per */
 /*    triangle.  Input only.                                                 */
 /*  `neighborlist':  An array of triangle neighbors; three ints per          */
 /*    triangle.  Output only.                                                */
@@ -125,14 +125,14 @@
 /*                                                                           */
 /*  `holelist':  An array of holes.  The first hole's x and y coordinates    */
 /*    are at indices [0] and [1], followed by the remaining holes.  Two      */
-/*    REALs per hole.  Input only, although the pointer is copied to the     */
+/*    triREALs per hole.  Input only, although the pointer is copied to the     */
 /*    output structure for your convenience.                                 */
 /*                                                                           */
 /*  `regionlist':  An array of regional attributes and area constraints.     */
 /*    The first constraint's x and y coordinates are at indices [0] and [1], */
 /*    followed by the regional attribute at index [2], followed by the       */
 /*    maximum area at index [3], followed by the remaining area constraints. */
-/*    Four REALs per area constraint.  Note that each regional attribute is  */
+/*    Four triREALs per area constraint.  Note that each regional attribute is  */
 /*    used only if you select the `A' switch, and each area constraint is    */
 /*    used only if you select the `a' switch (with no number following), but */
 /*    omitting one of these switches does not change the memory layout.      */
@@ -148,7 +148,7 @@
 /*    Voronoi diagrams.  The first normal vector's x and y magnitudes are    */
 /*    at indices [0] and [1], followed by the remaining vectors.  For each   */
 /*    finite edge in a Voronoi diagram, the normal vector written is the     */
-/*    zero vector.  Two REALs per edge.  Output only.                        */
+/*    zero vector.  Two triREALs per edge.  Output only.                        */
 /*                                                                           */
 /*                                                                           */
 /*  Any input fields that Triangle will examine must be initialized.         */
@@ -251,15 +251,15 @@
 #define TRIANGLEH
 #define ANSI_DECLARATORS
 struct triangulateio {
-  REAL *pointlist;                                               /* In / out */
-  REAL *pointattributelist;                                      /* In / out */
+  triREAL *pointlist;                                               /* In / out */
+  triREAL *pointattributelist;                                      /* In / out */
   int *pointmarkerlist;                                          /* In / out */
   int numberofpoints;                                            /* In / out */
   int numberofpointattributes;                                   /* In / out */
 
   int *trianglelist;                                             /* In / out */
-  REAL *triangleattributelist;                                   /* In / out */
-  REAL *trianglearealist;                                         /* In only */
+  triREAL *triangleattributelist;                                   /* In / out */
+  triREAL *trianglearealist;                                         /* In only */
   int *neighborlist;                                             /* Out only */
   int numberoftriangles;                                         /* In / out */
   int numberofcorners;                                           /* In / out */
@@ -269,15 +269,15 @@ struct triangulateio {
   int *segmentmarkerlist;                                        /* In / out */
   int numberofsegments;                                          /* In / out */
 
-  REAL *holelist;                        /* In / pointer to array copied out */
+  triREAL *holelist;                        /* In / pointer to array copied out */
   int numberofholes;                                      /* In / copied out */
 
-  REAL *regionlist;                      /* In / pointer to array copied out */
+  triREAL *regionlist;                      /* In / pointer to array copied out */
   int numberofregions;                                    /* In / copied out */
 
   int *edgelist;                                                 /* Out only */
   int *edgemarkerlist;            /* Not used with Voronoi diagram; out only */
-  REAL *normlist;                /* Used only with Voronoi diagram; out only */
+  triREAL *normlist;                /* Used only with Voronoi diagram; out only */
   int numberofedges;                                             /* Out only */
 };
 

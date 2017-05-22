@@ -33,3 +33,6 @@ clean:
 icpc:
 	( $(MAKE) all \
     "CC = icpc" )
+mpi:
+	( $(MAKE) all \
+    "CC = mpiCC" )
