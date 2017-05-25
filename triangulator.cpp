@@ -201,7 +201,6 @@ public:
 	}
 
 	double density_function(pnt p) {
-		/*
 		double lat, lon, r, norm, width, trans_center, min_val;
 		convert_xl(p.z, p.y, p.z, &lat, &lon);
 		
@@ -211,8 +210,6 @@ public:
       min_val = pow((1.0/5.0), 4);
       norm = 1.0/(1.0-min_val);
       return (((tanh((trans_center-r)*(1.0/width))+1.0)/2))/norm + min_val;
-		*/
-		return 1;
 	}
 
 
@@ -459,7 +456,6 @@ int main(int argc, char* argv[]) {
 			
 		
 		MPI_Barrier(MPI_COMM_WORLD);
-	printf("Task %d checking in.\n", my_id);
 
 		region myRegion;
 		int nPoints;
@@ -490,9 +486,9 @@ int main(int argc, char* argv[]) {
 			double myCenter[3];
 			myRegion.localpointlist.clear();
 			MPI_Recv(&myCenter, 1, MPI_Point, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			printf("Region %d has center (%f, %f, %f)\n", my_id, myCenter[0], myCenter[1], myCenter[2]);
+			//printf("Region %d has center (%f, %f, %f)\n", my_id, myCenter[0], myCenter[1], myCenter[2]);
 			MPI_Recv(&nPoints, 1, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			printf("Task %d sees there are %d points.\n", my_id, nPoints);
+			//printf("Task %d sees there are %d points.\n", my_id, nPoints);
 			pnt *myPoints = new pnt[nPoints];
 			MPI_Recv(myPoints, nPoints, MPI_Point, 0, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			myRegion.localpointlist.insert(myRegion.localpointlist.begin(), myPoints, myPoints+nPoints);
@@ -724,6 +720,8 @@ int main(int argc, char* argv[]) {
 	cout << "Total tPartition: " << tPartition << endl;
 	cout << "Total tTriangulation (nTasks == " << nTasks << "): " << tTriangulation << endl;
 	cout << "Total tLloyd: " << tLloyd << "\n" << endl;
+	cout << "Total tSendPoints: " << tSendPoints << endl;
+	cout << "Total tSendTris: " << tSendTriangles << endl;
 	cout << "nIterations: " << nIterations << endl;
 	cout << "Time in ideally parallelized Lloyd over " << nTasks << " processors: " << tPartition + tTriangulation + tLloyd / float(nTasks) << endl;
  	}

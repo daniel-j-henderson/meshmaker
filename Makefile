@@ -35,4 +35,4 @@ icpc:
     "CC = icpc" )
 mpi:
 	( $(MAKE) all \
-    "CC = mpiCC" )
+    "CC = mpicxx" )
