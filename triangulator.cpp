@@ -551,7 +551,8 @@ int main(int argc, char* argv[]) {
 			//t2 = clock();
 			//tTriangulation += (float)(t2-t1)/CLOCKS_PER_SEC;
 			//cout << (float)(t2-t1)/CLOCKS_PER_SEC << "s" << endl;
-
+			free(in.pointlist);
+			free(out.pointlist);
 			j = 0;
 			int l = 0;
 			k = 1;
@@ -559,6 +560,7 @@ int main(int argc, char* argv[]) {
 			//cout << "Processing Triangles and performing Lloyd iteration... 0%%" << flush;
 			//t1 = clock();
 			int percent = 0;
+			myRegion.triangles.clear();
 			for (k = 0; k < out.numberoftriangles; k++) {
 				//if (100 * k / out.numberoftriangles > percent) {
 				//	percent = 100 * k / out.numberoftriangles; 
@@ -570,7 +572,7 @@ int main(int argc, char* argv[]) {
 				myRegion.triangles.push_back(triangle(out.trianglelist[3*k], out.trianglelist[3*k+1], out.trianglelist[3*k+2]));
 				//numtri++;
 			}
-
+			free(out.trianglelist);
 
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (my_id == 0) {
@@ -650,6 +652,8 @@ int main(int argc, char* argv[]) {
 				for (k=0; k<regions[i].localpointlist.size(); k++) {
 					newCenter[k] = regions[i].localpointlist[k] + newCenter[k] / areaCell[k];
 				}
+				delete newCenter;
+				delete areaCell;
 			}			
 			t1 = clock();
 			tLloyd += (float)(t1-t2)/CLOCKS_PER_SEC;
