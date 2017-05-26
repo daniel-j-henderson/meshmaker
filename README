@@ -1,7 +1,7 @@
-1. Generate list of points
-2. Run meshmaker on them
-3. Run them through points-mpas to make an nc file
-4. For beta != 1, run addDensity with the original lats, new nc file, and beta value
-5. Ready to use 
+Given a list of 3d points on the sphere, this program now will calculate timing information for the partitioning, stereographic projection/Delaunay triangulation, and Lloyd iteration (weight computation/relaxation) stages of the mesh generation process. No mesh is produced at the end, only timing info. Use the 'addmpi' branch for an MPI implementation. 
 
-note // Look for things like 'nc_extract_points_cartesian' and 'find_edgelength_max.ncl' to help you out
+Use:
+
+./meshmaker points_filename number_of_iterations
+
+points_filename: see iofiles/x1.40962.point.txt for example
